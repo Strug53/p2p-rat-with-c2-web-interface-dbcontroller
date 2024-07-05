@@ -7,11 +7,11 @@ import (
 )
 
 type readyStruct struct {
-	ip string
+	IP string `json:"ip"`
 }
 
 func main() {
-	fmt.Printf("Starting..")
+	fmt.Printf("Starting.. \n")
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Hello")
 	})
@@ -19,18 +19,19 @@ func main() {
 		fmt.Fprint(w, r.URL.Query().Get("m"))
 	})
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("ready endpoint used \n")
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		fmt.Printf("Check ready ")
-		rdy := &readyStruct{}
-		err := json.NewDecoder(r.Body).Decode(rdy)
+
+		var rdy readyStruct
+		err := json.NewDecoder(r.Body).Decode(&rdy)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Printf(rdy.ip)
+		fmt.Printf("Ip: " + rdy.IP)
 	})
 
 	http.ListenAndServe(":1234", nil)
