@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func findLocalAddress(ips []net.IP) []string {
@@ -69,9 +68,10 @@ func main() {
 	flag.Parse()
 
 	//sendReadySignal(ip_addr)
-	go startServer()
-	sendReadySignal(ip_addr)
-	time.Sleep(100 * time.Millisecond)
+
+	go sendReadySignal(ip_addr)
+	startServer()
+
 }
 func sendReadySignal(ip *string) {
 	c2_addr := "http://" + *ip + ":1234/ready"

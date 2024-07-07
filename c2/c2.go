@@ -1,33 +1,46 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 )
 
+var ip = "localhost:5555"
+
 type readyStruct struct {
 	IP string `json:"ip"`
 }
 
-func setCommand(rdy *readyStruct) {
-	fmt.Printf("Enter the command here: ")
+func setCommand() {
 
-	reader := bufio.NewReader(os.Stdin)
-	text, _ := reader.ReadString('\n')
+	for {
+		if ip == "" {
+			continue
+		}
 
-	url := "http://" + rdy.IP + "/cmd?m=" + text
-	fmt.Println(text)
-	fmt.Printf("\n")
+		fmt.Printf("Enter the command here: ")
+		var command string
+		fmt.Fscan(os.Stdin, &command) // fix the problem with space
 
-	resp, _ := http.Post(url, "application/json", nil) //edit exceptions
-	resp.Body.Close()
+		url := "http://" + ip + "/cmd?m=" + command
+		fmt.Printf(url)
 
+		fmt.Printf("\n")
+
+		resp, err := http.Post(url, "application/json", nil) //edit exceptions
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+	}
 }
 
 func main() {
+	startServer()
+}
+func startServer() {
 	fmt.Printf("Starting.. \n")
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Hello")
@@ -49,7 +62,8 @@ func main() {
 		}
 		fmt.Printf("Client ready for commands:	" + rdy.IP)
 		fmt.Printf("\n")
-		setCommand(&rdy)
+		go setCommand()
+		//ip = rdy.IP
 	})
 
 	http.ListenAndServe(":1234", nil)
