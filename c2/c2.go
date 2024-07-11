@@ -1,16 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var ip = "localhost:5555"
 
-type readyStruct struct {
-	IP string `json:"ip"`
+type Contact struct {
+	IP     string `json:"Ip"`
+	Port   string `json:"Port"`
+	System string `json:"System"` //os
+	Key    string `json:"Key"`    //new programm -> new individual key for autorizaiton (make with time and load main function)
+	//manager key also
+	Date string `json:"Date"`
 }
 
 func setCommand() {
@@ -21,9 +28,15 @@ func setCommand() {
 		}
 
 		fmt.Printf("Enter the command here: ")
-		var command string
-		fmt.Fscan(os.Stdin, &command) // fix the problem with space
+		//var command string
+		//fmt.Fscan(os.Stdin, &command) // fix the problem with space
 
+		in := bufio.NewReader(os.Stdin)
+		text, err := in.ReadString('\n')
+		command := strings.Replace(text, " ", "+", -1)
+		command = command[:len(command)-2]
+
+		fmt.Printf(command)
 		url := "http://" + ip + "/cmd?m=" + command
 		fmt.Printf(url)
 
@@ -54,13 +67,18 @@ func startServer() {
 			return
 		}
 
-		var rdy readyStruct
-		err := json.NewDecoder(r.Body).Decode(&rdy)
+		var Contact Contact
+		err := json.NewDecoder(r.Body).Decode(&Contact)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Printf("Client ready for commands:	" + rdy.IP)
+		fmt.Printf("Client ready for commands:	\n")
+		fmt.Printf("\t %s \n", Contact.IP)
+		fmt.Printf("\t %s \n", Contact.Port)
+		fmt.Printf("\t %s \n", Contact.System)
+		fmt.Printf("\t %s \n", Contact.Date)
+
 		fmt.Printf("\n")
 		go setCommand()
 		//ip = rdy.IP
