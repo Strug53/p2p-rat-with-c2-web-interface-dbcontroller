@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// answer = (command)+(Key menager)+(Key client)+(answer)
+// answer = (command)+(Key menager)+(Key client)+(answer) string
 type Contact struct {
 	Ip     string
 	Port   string

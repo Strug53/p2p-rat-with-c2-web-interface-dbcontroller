@@ -1,23 +1,30 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 func main() {
+	e := echo.New()
+	//e.Use(middleware.Static())
 
-	fmt.Printf("Starting web.. \n")
-	fs := http.FileServer(http.Dir("./static/login.html"))
+	/*e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
+		return key == "123", nil
+	}))*/
 
-	http.Handle("/", fs)
-
-	// http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	// 	http.FileServer(http.Dir("./static/login.html"))
-	// })
-	http.HandleFunc("/check", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, r.URL.Query().Get("m"))
+	e.GET("/", func(c echo.Context) error {
+		return c.File("static/login.html")
 	})
+	e.GET("/dashboard", func(c echo.Context) error {
+		return c.File("static/dashboard.html")
+	})
+	e.POST("/login", func(c echo.Context) error {
+		//usr := c.FormValue("Username")
+		//key := c.FormValue("key")
+		return c.Redirect(http.StatusTemporaryRedirect, "/dashboard")
 
-	http.ListenAndServe(":8080", nil)
+	})
+	e.Logger.Fatal(e.Start(":8080"))
 }
