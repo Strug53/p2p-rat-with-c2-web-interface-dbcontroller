@@ -17,7 +17,7 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.File("static/login.html")
 	})
-	e.GET("/dashboard", func(c echo.Context) error {
+	e.POST("/dashboard", func(c echo.Context) error {
 		return c.File("static/dashboard.html")
 	})
 	e.POST("/login", func(c echo.Context) error {
