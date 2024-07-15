@@ -2,11 +2,15 @@ package main
 
 import (
 	"bufio"
+	"dbcontroller"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+
+	"github.com/labstack/echo/v4"
 )
 
 var ip = "localhost:5555"
@@ -57,51 +61,41 @@ func setCommand() {
 	}
 }
 
-/*
-	func GetAnswer(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var Answer Answer
-		err := json.NewDecoder(r.Body).Decode(&Answer)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		fmt.Printf("Answer coming from client: %s \n", Answer.IP)
-		fmt.Printf("\t %s \n", Answer.Command)
-		fmt.Printf("\t %s \n", Answer.Key_Manager)
-		fmt.Printf("\t %s \n", Answer.Key_Client)
-		fmt.Printf("\t %s \n", Answer.Result)
-
-		fmt.Printf("\n")
-	}
-*/
 func main() {
 	startServer()
 }
 func startServer() {
+	e := echo.New()
 	fmt.Printf("Starting.. \n")
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Hello")
-	})
-	http.HandleFunc("/check", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, r.URL.Query().Get("m"))
-	})
-	http.HandleFunc("/answer", func(w http.ResponseWriter, r *http.Request) {
+	e.GET("/sendClientsTable", func(c echo.Context) error {
+		var html_string string
+
+		clients := dbcontroller.Select_all_clients()
+		fmt.Println(clients)
 		fmt.Printf("\n")
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
+		for _, c := range clients {
+			html_buf := fmt.Sprintf(`
+			<tr>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+		  	</tr>`, strconv.Itoa(c.Id), c.IP, c.Port, c.System, c.Client_key, c.Date)
+
+			html_string += html_buf
 		}
 
+		return c.HTML(http.StatusOK, html_string)
+	})
+	e.POST("/answer", func(c echo.Context) error {
+		fmt.Printf("\n")
+
 		var Answer Answer
-		err := json.NewDecoder(r.Body).Decode(&Answer)
+		err := json.NewDecoder(c.Request().Body).Decode(&Answer)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			fmt.Printf(err.Error())
 		}
 		fmt.Printf("Answer coming from client: %s \n", Answer.IP)
 		fmt.Printf("\t %s \n", Answer.Command)
@@ -110,18 +104,14 @@ func startServer() {
 		fmt.Printf("\t %s \n", Answer.Result)
 
 		fmt.Printf("\n")
-	})
-	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+		return c.String(http.StatusOK, "Ok")
 
+	})
+	e.POST("/ready", func(c echo.Context) error {
 		var Contact Contact
-		err := json.NewDecoder(r.Body).Decode(&Contact)
+		err := json.NewDecoder(c.Request().Body).Decode(&Contact)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			fmt.Printf(err.Error())
 		}
 		fmt.Printf("Client ready for commands:	\n")
 		fmt.Printf("\t %s \n", Contact.IP)
@@ -131,8 +121,9 @@ func startServer() {
 
 		fmt.Printf("\n")
 		go setCommand()
+		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
 
-	http.ListenAndServe(":1234", nil)
+	e.Logger.Fatal(e.Start(":1234"))
 }

@@ -106,11 +106,5 @@ func Select_all_clients() []Client {
 
 // UPDATE SQLITE_SEQUENCE SET seq = 0 WHERE name = 'ranobes';
 // func main() {
-// 	cs := select_all_clients()
-// 	fmt.Printf("\n")
-
-// 	for _, c := range cs {
-// 		fmt.Printf(" %s \n %s \n %s \n %s \n %s \n %s \n", strconv.Itoa(c.id), c.ip, c.port, c.system, c.client_key, c.date)
-// 	}
 
 // }

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"dbcontroller"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -15,13 +15,19 @@ func main() {
 	/*e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
 		return key == "123", nil
 	}))*/
-	clients := dbcontroller.Select_all_clients()
 
-	for _, cc := range clients {
-		fmt.Println(cc.IP)
-	}
-	e.GET("/usr", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Yes")
+	e.GET("/ready", func(c echo.Context) error {
+		resp, err := http.Get("http://localhost:1234/sendClientsTable")
+		if err != nil {
+			fmt.Printf("Error with post request")
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("Error in parsing of response")
+		}
+		resp.Body.Close()
+
+		return c.HTML(http.StatusOK, string(body))
 	})
 	e.GET("/", func(c echo.Context) error {
 		return c.File("static/login.html")
