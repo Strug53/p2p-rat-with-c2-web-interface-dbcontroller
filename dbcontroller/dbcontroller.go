@@ -7,13 +7,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type client struct {
-	id         int
-	ip         string
-	port       string
-	system     string
-	client_key string
-	date       string
+type Client struct {
+	Id         int
+	IP         string
+	Port       string
+	System     string
+	Client_key string
+	Date       string
 }
 
 func Delete_from_id(id int) {
@@ -78,7 +78,7 @@ func Add_client(ip string, port string, system string, client_key string, date s
 	_ = res
 
 }
-func Select_all_clients() []client {
+func Select_all_clients() []Client {
 	db, err := sql.Open("sqlite3", "clients.db")
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
@@ -89,12 +89,12 @@ func Select_all_clients() []client {
 	if err != nil {
 		fmt.Println(err)
 	}
-	clients := []client{}
+	clients := []Client{}
 	defer rows.Close()
 
 	for rows.Next() {
-		c := client{}
-		err := rows.Scan(&c.id, &c.ip, &c.port, &c.system, &c.client_key, &c.date)
+		c := Client{}
+		err := rows.Scan(&c.Id, &c.IP, &c.Port, &c.System, &c.Client_key, &c.Date)
 		if err != nil {
 			fmt.Println(err)
 			continue
