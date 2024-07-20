@@ -124,6 +124,6 @@ func startServer() {
 		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
-
-	e.Logger.Fatal(e.Start(":1234"))
+	//adding users in db
+	e.Logger.Fatal(e.StartTLS(":443", "../cert.pem", "../key.pem"))
 }
