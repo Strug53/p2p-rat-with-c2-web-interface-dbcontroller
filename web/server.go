@@ -41,5 +41,5 @@ func main() {
 		return c.Redirect(http.StatusTemporaryRedirect, "/dashboard")
 
 	})
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.StartTLS(":8080", "../cert.pem", "../key.pem"))
 }
