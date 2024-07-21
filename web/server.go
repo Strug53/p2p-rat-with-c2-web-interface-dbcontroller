@@ -17,7 +17,7 @@ func main() {
 	}))*/
 
 	e.GET("/ready", func(c echo.Context) error {
-		resp, err := http.Get("http://localhost:1234/sendClientsTable")
+		resp, err := http.Get("https://localhost:443/sendClientsTable")
 		if err != nil {
 			fmt.Printf("Error with post request")
 		}
