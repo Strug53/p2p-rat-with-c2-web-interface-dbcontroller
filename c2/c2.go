@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"dbcontroller"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -30,35 +27,38 @@ type Answer struct {
 	Key_Client  string `json:"Key_Client"`
 	Result      string `json:"Result"`
 }
+type cmdForm struct {
+	ID  string `json:"id"`
+	Cmd string `json:"cmd"`
+}
 
-func setCommand() {
+func sendCommand(c echo.Context) error {
 
-	for {
-		if ip == "" {
-			continue
-		}
+	fmt.Printf("Enter the command here: ")
+	cmdJson := cmdForm{}
 
-		fmt.Printf("Enter the command here: ")
-		//var command string
-		//fmt.Fscan(os.Stdin, &command) // fix the problem with space
-
-		in := bufio.NewReader(os.Stdin)
-		text, err := in.ReadString('\n')
-		command := strings.Replace(text, " ", "+", -1)
-		command = command[:len(command)-2]
-
-		fmt.Printf(command)
-		url := "http://" + ip + "/cmd?m=" + command
-		fmt.Printf(url)
-
-		fmt.Printf("\n")
-
-		resp, err := http.Post(url, "application/json", nil) //edit exceptions
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
+	err := json.NewDecoder(c.Request().Body).Decode(&cmdJson)
+	if err != nil {
+		fmt.Printf(err.Error())
 	}
+	fmt.Printf(cmdJson.Cmd)
+	url := "http://" + ip + "/cmd?m=" + cmdJson.Cmd
+	fmt.Printf(url)
+
+	fmt.Printf("\n")
+
+	resp, err := http.Post(url, "application/json", nil) //edit exceptions
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	ans := Answer{}
+	er := json.NewDecoder(resp.Body).Decode(&ans)
+	if er != nil {
+		fmt.Printf("Error in decoding answer")
+	}
+	fmt.Println(ans)
+	return c.String(http.StatusOK, ans.Result)
 }
 
 func main() {
@@ -67,6 +67,7 @@ func main() {
 func startServer() {
 	e := echo.New()
 	fmt.Printf("Starting.. \n")
+	//htmx
 	e.GET("/sendClientsTable", func(c echo.Context) error {
 		var html_string string
 
@@ -82,13 +83,19 @@ func startServer() {
 				<td>%s</td>
 				<td>%s</td>
 				<td>%s</td>
-		  	</tr>`, strconv.Itoa(c.Id), c.IP, c.Port, c.System, c.Client_key, c.Date)
+				<td>
+				<a href="https://localhost:8080/remote?uid=%s">К управлению</a>
+				</td>
+		  	</tr>`, strconv.Itoa(c.Id), c.IP, c.Port, c.System, c.Client_key, c.Date, strconv.Itoa(c.Id))
 
 			html_string += html_buf
 		}
 
 		return c.HTML(http.StatusOK, html_string)
 	})
+	//getCommand
+	e.POST("/getCommand", sendCommand)
+
 	e.POST("/answer", func(c echo.Context) error {
 		fmt.Printf("\n")
 
@@ -120,10 +127,29 @@ func startServer() {
 		fmt.Printf("\t %s \n", Contact.Date)
 
 		fmt.Printf("\n")
-		go setCommand()
 		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
 	//adding users in db
+	//SECURITY!!. ADD VERIFICATION
+	e.GET("/checkUser/:uid", func(c echo.Context) error {
+		userId := c.Param("uid")
+		fmt.Printf("\n")
+		fmt.Printf(userId)
+		fmt.Printf("\n")
+
+		userId_int, err := strconv.Atoi(userId)
+		if err != nil {
+			fmt.Println(err)
+			return c.String(http.StatusOK, "None")
+		}
+		db_result := dbcontroller.Select_client_ID(userId_int)
+		fmt.Println(db_result)
+		if (db_result != dbcontroller.Client{}) {
+			return c.String(http.StatusOK, "Ok")
+		} else {
+			return c.String(http.StatusOK, "None")
+		}
+	})
 	e.Logger.Fatal(e.StartTLS(":443", "../cert.pem", "../key.pem"))
 }

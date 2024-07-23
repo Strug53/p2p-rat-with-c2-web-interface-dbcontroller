@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -147,6 +148,7 @@ func sendReadySignal(ip *string) {
 // Server
 func SendAnswer() {
 	//Before needs execute the cmd
+
 	link := "https://localhost:443/answer"
 	fmt.Printf("\n")
 	fmt.Printf("Sending answer")
@@ -202,9 +204,20 @@ func startServer() {
 		cmd := r.URL.Query().Get("m")
 
 		fmt.Printf(cmd)
-
+		w.Header().Set("Content-Type", "application/json")
 		//exec the command
-		go SendAnswer()
+
+		fmt.Printf("\n")
+		fmt.Printf("Sending answer")
+		body := Answer{
+			IP:          "192.168.0.1",
+			Command:     "ls",
+			Key_Manager: "h23rg2vyr672",
+			Key_Client:  "dfheuf32f2",
+			Result:      "Directory",
+		}
+
+		json.NewEncoder(w).Encode(body)
 	})
 
 	http.ListenAndServe(":5555", nil)

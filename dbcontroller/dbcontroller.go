@@ -3,6 +3,7 @@ package dbcontroller
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -102,6 +103,29 @@ func Select_all_clients() []Client {
 		clients = append(clients, c)
 	}
 	return clients
+}
+func Select_client_ID(uid int) Client {
+	db, err := sql.Open("sqlite3", "clients.db")
+	if err != nil {
+		fmt.Printf("Error in opening db \n")
+	}
+	fmt.Printf("Opened")
+	defer db.Close()
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM Clients WHERE id = %s", strconv.Itoa(uid)))
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	c := Client{}
+	for rows.Next() {
+		err := rows.Scan(&c.Id, &c.IP, &c.Port, &c.System, &c.Client_key, &c.Date)
+		if err != nil {
+			fmt.Println(err)
+			return Client{}
+		}
+	}
+
+	return c
 }
 
 // UPDATE SQLITE_SEQUENCE SET seq = 0 WHERE name = 'ranobes';

@@ -6,9 +6,10 @@ PrintNewRaw()
 
 let command = '';
 
-term.onData(e => {
+term.onData( e => {
     if (e === '\r') { // Enter key
         term.write("\n \r")
+        console.log(command)
         handleCommand(command.trim());
         command = ''; // Reset command buffer
     } else if (e === '\x7F') { // Backspace key
@@ -26,20 +27,37 @@ function PrintNewRaw(){
     term.write("# ")
 
 }
-function handleCommand(input) {
+async function SendCommand(){
+
+    let data = {
+        id: "1",
+        cmd: "ls"
+    }
+    console.log(data)
+    const response = await fetch("/sendCmd", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify(data)
+    })
+    const body = await response.text()
+    term.write(body)
+    
+};
+
+async function handleCommand(input) {
     const args = input.split(' ');
     const command = args[0];
     const params = args.slice(1).join(' ');
 
     switch (command) {
-        case 'echo':
-            term.write(params + '\n \r');
+        case 'clear':
+            term.clear();
             break;
-        case 'cat':
-            // Implement 'cat' command logic here
+        case 'cls':
+            term.clear()
             break;
         default:
-            term.write(`Command not found: ${command}\n \r`);
+            await SendCommand();
             break;
     }
     PrintNewRaw()
