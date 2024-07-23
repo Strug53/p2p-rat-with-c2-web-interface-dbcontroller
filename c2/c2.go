@@ -1,12 +1,13 @@
 package main
 
 import (
-	"bufio"
+	"dbcontroller"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"strings"
+	"strconv"
+
+	"github.com/labstack/echo/v4"
 )
 
 var ip = "localhost:5555"
@@ -26,82 +27,82 @@ type Answer struct {
 	Key_Client  string `json:"Key_Client"`
 	Result      string `json:"Result"`
 }
-
-func setCommand() {
-
-	for {
-		if ip == "" {
-			continue
-		}
-
-		fmt.Printf("Enter the command here: ")
-		//var command string
-		//fmt.Fscan(os.Stdin, &command) // fix the problem with space
-
-		in := bufio.NewReader(os.Stdin)
-		text, err := in.ReadString('\n')
-		command := strings.Replace(text, " ", "+", -1)
-		command = command[:len(command)-2]
-
-		fmt.Printf(command)
-		url := "http://" + ip + "/cmd?m=" + command
-		fmt.Printf(url)
-
-		fmt.Printf("\n")
-
-		resp, err := http.Post(url, "application/json", nil) //edit exceptions
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-	}
+type cmdForm struct {
+	ID  string `json:"id"`
+	Cmd string `json:"cmd"`
 }
 
-/*
-	func GetAnswer(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+func sendCommand(c echo.Context) error {
 
-		var Answer Answer
-		err := json.NewDecoder(r.Body).Decode(&Answer)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		fmt.Printf("Answer coming from client: %s \n", Answer.IP)
-		fmt.Printf("\t %s \n", Answer.Command)
-		fmt.Printf("\t %s \n", Answer.Key_Manager)
-		fmt.Printf("\t %s \n", Answer.Key_Client)
-		fmt.Printf("\t %s \n", Answer.Result)
+	fmt.Printf("Enter the command here: ")
+	cmdJson := cmdForm{}
 
-		fmt.Printf("\n")
+	err := json.NewDecoder(c.Request().Body).Decode(&cmdJson)
+	if err != nil {
+		fmt.Printf(err.Error())
 	}
-*/
+	fmt.Printf(cmdJson.Cmd)
+	url := "http://" + ip + "/cmd?m=" + cmdJson.Cmd
+	fmt.Printf(url)
+
+	fmt.Printf("\n")
+
+	resp, err := http.Post(url, "application/json", nil) //edit exceptions
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	ans := Answer{}
+	er := json.NewDecoder(resp.Body).Decode(&ans)
+	if er != nil {
+		fmt.Printf("Error in decoding answer")
+	}
+	fmt.Println(ans)
+	return c.String(http.StatusOK, ans.Result)
+}
+
 func main() {
 	startServer()
 }
 func startServer() {
+	e := echo.New()
 	fmt.Printf("Starting.. \n")
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Hello")
-	})
-	http.HandleFunc("/check", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, r.URL.Query().Get("m"))
-	})
-	http.HandleFunc("/answer", func(w http.ResponseWriter, r *http.Request) {
+	//htmx
+	e.GET("/sendClientsTable", func(c echo.Context) error {
+		var html_string string
+
+		clients := dbcontroller.Select_all_clients()
+		fmt.Println(clients)
 		fmt.Printf("\n")
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
+		for _, c := range clients {
+			html_buf := fmt.Sprintf(`
+			<tr>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>%s</td>
+				<td>
+				<a href="https://localhost:8080/remote?uid=%s">К управлению</a>
+				</td>
+		  	</tr>`, strconv.Itoa(c.Id), c.IP, c.Port, c.System, c.Client_key, c.Date, strconv.Itoa(c.Id))
+
+			html_string += html_buf
 		}
 
+		return c.HTML(http.StatusOK, html_string)
+	})
+	//getCommand
+	e.POST("/getCommand", sendCommand)
+
+	e.POST("/answer", func(c echo.Context) error {
+		fmt.Printf("\n")
+
 		var Answer Answer
-		err := json.NewDecoder(r.Body).Decode(&Answer)
+		err := json.NewDecoder(c.Request().Body).Decode(&Answer)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			fmt.Printf(err.Error())
 		}
 		fmt.Printf("Answer coming from client: %s \n", Answer.IP)
 		fmt.Printf("\t %s \n", Answer.Command)
@@ -110,18 +111,14 @@ func startServer() {
 		fmt.Printf("\t %s \n", Answer.Result)
 
 		fmt.Printf("\n")
-	})
-	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+		return c.String(http.StatusOK, "Ok")
 
+	})
+	e.POST("/ready", func(c echo.Context) error {
 		var Contact Contact
-		err := json.NewDecoder(r.Body).Decode(&Contact)
+		err := json.NewDecoder(c.Request().Body).Decode(&Contact)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			fmt.Printf(err.Error())
 		}
 		fmt.Printf("Client ready for commands:	\n")
 		fmt.Printf("\t %s \n", Contact.IP)
@@ -130,9 +127,29 @@ func startServer() {
 		fmt.Printf("\t %s \n", Contact.Date)
 
 		fmt.Printf("\n")
-		go setCommand()
+		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
+	//adding users in db
+	//SECURITY!!. ADD VERIFICATION
+	e.GET("/checkUser/:uid", func(c echo.Context) error {
+		userId := c.Param("uid")
+		fmt.Printf("\n")
+		fmt.Printf(userId)
+		fmt.Printf("\n")
 
-	http.ListenAndServe(":1234", nil)
+		userId_int, err := strconv.Atoi(userId)
+		if err != nil {
+			fmt.Println(err)
+			return c.String(http.StatusOK, "None")
+		}
+		db_result := dbcontroller.Select_client_ID(userId_int)
+		fmt.Println(db_result)
+		if (db_result != dbcontroller.Client{}) {
+			return c.String(http.StatusOK, "Ok")
+		} else {
+			return c.String(http.StatusOK, "None")
+		}
+	})
+	e.Logger.Fatal(e.StartTLS(":443", "../cert.pem", "../key.pem"))
 }
