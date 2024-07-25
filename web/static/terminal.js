@@ -28,12 +28,26 @@ function PrintNewRaw(){
 
 }
 async function SendCommand(){
+    let url = window.location.href;
+
+    let index = url.search("uid=")+4
+
+    let uid = ""
+    for (index;index < url.length; index++){
+        uid += url[index]
+    };
+    
+    console.log(uid)
 
     let data = {
-        id: "1",
-        cmd: "ls"
+        id: uid,
+        cmd: command
     }
-    console.log(data)
+
+
+
+
+    
     const response = await fetch("/sendCmd", {
         method: "POST",
         headers: {'Content-Type': 'application/json'}, 

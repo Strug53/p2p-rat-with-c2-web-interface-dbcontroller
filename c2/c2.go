@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -20,6 +21,8 @@ type Contact struct {
 	//manager key also
 	Date string `json:"Date"`
 }
+
+// for logging
 type Answer struct {
 	IP          string `json:"Ip"`
 	Command     string `json:"Command"`
@@ -38,14 +41,21 @@ func sendCommand(c echo.Context) error {
 	cmdJson := cmdForm{}
 
 	err := json.NewDecoder(c.Request().Body).Decode(&cmdJson)
+
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
+
+	fmt.Printf("\n")
+
+	cmdJson.Cmd = strings.Replace(cmdJson.Cmd, " ", "+", -1)
 	fmt.Printf(cmdJson.Cmd)
 	url := "http://" + ip + "/cmd?m=" + cmdJson.Cmd
 	fmt.Printf(url)
 
 	fmt.Printf("\n")
+
+	fmt.Printf(cmdJson.ID)
 
 	resp, err := http.Post(url, "application/json", nil) //edit exceptions
 	if err != nil {
@@ -84,7 +94,7 @@ func startServer() {
 				<td>%s</td>
 				<td>%s</td>
 				<td>
-				<a href="https://localhost:8080/remote?uid=%s">К управлению</a>
+				<a href="https://localhost:7777/remote?uid=%s">К управлению</a>
 				</td>
 		  	</tr>`, strconv.Itoa(c.Id), c.IP, c.Port, c.System, c.Client_key, c.Date, strconv.Itoa(c.Id))
 
