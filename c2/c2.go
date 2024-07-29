@@ -137,6 +137,7 @@ func startServer() {
 		fmt.Printf("\t %s \n", Contact.Date)
 
 		fmt.Printf("\n")
+		//dbcontroller.Add_client(Contact.IP, Contact.Port, Contact.System, Contact.Key, Contact.Date)
 		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
