@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
 
 var ip = "localhost:5555"
+
+var timeOfRefresh int = 50
 
 type Contact struct {
 	IP     string `json:"Ip"`
@@ -70,8 +73,20 @@ func sendCommand(c echo.Context) error {
 	fmt.Println(ans)
 	return c.String(http.StatusOK, ans.Result)
 }
+func refreshDatabase() {
+
+	time1 := time.NewTimer(time.Duration(timeOfRefresh) * time.Second)
+	<-time1.C
+
+	fmt.Printf("\nREFRESH\n")
+
+	dbcontroller.Delete_all()
+
+	refreshDatabase()
+}
 
 func main() {
+	go refreshDatabase()
 	startServer()
 }
 func startServer() {
@@ -137,7 +152,15 @@ func startServer() {
 		fmt.Printf("\t %s \n", Contact.Date)
 
 		fmt.Printf("\n")
-		//dbcontroller.Add_client(Contact.IP, Contact.Port, Contact.System, Contact.Key, Contact.Date)
+		cont := dbcontroller.Select_client_IP(Contact.IP)
+		fmt.Println(Contact)
+		fmt.Printf("\n")
+
+		fmt.Println(cont)
+		if cont.IP == Contact.IP {
+			return c.String(http.StatusOK, "Ok")
+		}
+		dbcontroller.Add_client(Contact.IP, Contact.Port, Contact.System, Contact.Key, Contact.Date)
 		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
