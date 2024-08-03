@@ -31,6 +31,7 @@ type Answer struct {
 }
 
 var timeOfRefresh int = 15 //time in seconds
+var secretKey string = "Bl5cMvdxpej8efG3vCQBl0UVLFByoQ9W"
 
 func findLocalAddress(ips []net.IP) []string {
 	//192.168.0.?
@@ -136,12 +137,19 @@ func sendReadySignal(ip *string) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
+	r, err := http.NewRequest("POST", link, bytes.NewBufferString(body))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Add("Content-Type", "application/json")
+	r.Header.Set("auth-key", secretKey)
 	client := &http.Client{Transport: tr}
 
-	response, err := client.Post(link, "application/json", bytes.NewBufferString(body))
+	response, err := client.Do(r)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
+
 	defer response.Body.Close()
 
 	content, _ := ioutil.ReadAll(response.Body)

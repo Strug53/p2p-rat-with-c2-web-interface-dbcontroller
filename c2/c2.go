@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 var ip = "localhost:5555"
@@ -37,6 +38,8 @@ type cmdForm struct {
 	ID  string `json:"id"`
 	Cmd string `json:"cmd"`
 }
+
+var secretKey string = "Bl5cMvdxpej8efG3vCQBl0UVLFByoQ9W"
 
 func sendCommand(c echo.Context) error {
 
@@ -91,6 +94,15 @@ func main() {
 }
 func startServer() {
 	e := echo.New()
+
+	e.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
+		KeyLookup: "header:auth-key",
+		Validator: func(key string, c echo.Context) (bool, error) {
+			fmt.Println(key)
+			return key == secretKey, nil
+		},
+	}))
+
 	fmt.Printf("Starting.. \n")
 	//htmx
 	e.GET("/sendClientsTable", func(c echo.Context) error {
@@ -157,6 +169,7 @@ func startServer() {
 		fmt.Printf("\n")
 
 		fmt.Println(cont)
+		//Change ip to key
 		if cont.IP == Contact.IP {
 			return c.String(http.StatusOK, "Ok")
 		}
@@ -166,6 +179,11 @@ func startServer() {
 	})
 	//adding users in db
 	//SECURITY!!. ADD VERIFICATION
+	e.GET("/checkKey", func(c echo.Context) error {
+		fmt.Printf("\nCheckKEy\n")
+		return c.String(http.StatusOK, "Ok")
+	})
+
 	e.GET("/checkUser/:uid", func(c echo.Context) error {
 		userId := c.Param("uid")
 		fmt.Printf("\n")
