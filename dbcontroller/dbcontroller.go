@@ -22,7 +22,6 @@ func Delete_from_id(id int) {
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
 	}
-	fmt.Printf("Opened")
 	defer db.Close()
 
 	res, err := db.Exec(
@@ -37,7 +36,6 @@ func Delete_from_IP(ip string) {
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
 	}
-	fmt.Printf("Opened")
 	defer db.Close()
 
 	res, err := db.Exec(
@@ -54,7 +52,6 @@ func Delete_all() {
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
 	}
-	fmt.Printf("Opened")
 	defer db.Close()
 
 	res, err := db.Exec(
@@ -70,7 +67,6 @@ func Add_client(ip string, port string, system string, client_key string, date s
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
 	}
-	fmt.Printf("Opened")
 	defer db.Close()
 	res, err := db.Exec(`INSERT INTO Clients(ip,port,system,client_key,date) VALUES($1,$2,$3,$4,$5);`, ip, port, system, client_key, date)
 	if err != nil {
@@ -84,7 +80,6 @@ func Select_all_clients() []Client {
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
 	}
-	fmt.Printf("Opened")
 	defer db.Close()
 	rows, err := db.Query("SELECT * FROM Clients")
 	if err != nil {
@@ -109,7 +104,6 @@ func Select_client_ID(uid int) Client {
 	if err != nil {
 		fmt.Printf("Error in opening db \n")
 	}
-	fmt.Printf("Opened")
 	defer db.Close()
 	rows, err := db.Query(fmt.Sprintf("SELECT * FROM Clients WHERE id = %s", strconv.Itoa(uid)))
 	if err != nil {
@@ -125,6 +119,37 @@ func Select_client_ID(uid int) Client {
 		}
 	}
 
+	return c
+}
+func Select_client_IP(ip string) Client {
+	db, err := sql.Open("sqlite3", "clients.db")
+	if err != nil {
+		fmt.Printf("Error in opening db \n")
+	}
+
+	fmt.Printf("Opened")
+
+	defer db.Close()
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM Clients WHERE ip = \"%s\"", ip))
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(rows)
+
+	if rows == nil {
+		return Client{}
+	}
+
+	defer rows.Close()
+	c := Client{}
+	for rows.Next() {
+		err := rows.Scan(&c.Id, &c.IP, &c.Port, &c.System, &c.Client_key, &c.Date)
+		if err != nil {
+			fmt.Println(err)
+			return Client{}
+		}
+	}
+	fmt.Println(c)
 	return c
 }
 

